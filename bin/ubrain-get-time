@@ -1,0 +1,31 @@
+#!/usr/bin/python
+# vi:set ai sw=4 ts=4 et smarttab:
+
+import serial
+import sys
+import datetime
+import time
+import re
+
+import signal
+signal.alarm(3)
+
+ser = serial.Serial(sys.argv[1])
+ser.baud = int(sys.argv[2])
+ser.flushInput()
+
+while True:
+    line = ser.readline()
+    m = re.match(r'^@(\d+)-(\d+)-(\d+)\s+(\d+):(\d+):(\d+)\s+', line)
+
+    if m:
+        year, month, day, hour, minute, second = m.groups()
+        d = datetime.datetime(int(year), int(month), int(day), int(hour), int(minute), int(second))
+        #t = time.mktime(d.timetuple())
+        #print time.strftime("%H:%M:%S")
+        #print time.time() - t
+        print d
+        sys.exit(0)
+    else:
+        pass
+        #print "Ignoring", repr(line)

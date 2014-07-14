@@ -1,0 +1,19 @@
+#!/usr/bin/python
+# vi:set ai sw=4 ts=4 et smarttab:
+
+import serial
+import sys
+import datetime
+import time
+import re
+
+import signal
+signal.alarm(3)
+
+ser = serial.Serial(sys.argv[1])
+ser.baud = int(sys.argv[2])
+ser.flushInput()
+
+while True:
+    line = ser.readline()
+    print repr(line)

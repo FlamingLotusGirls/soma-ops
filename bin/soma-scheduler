@@ -1,0 +1,167 @@
+#!/usr/bin/perl
+# vi:set ai sw=4 ts=4 et:
+
+use Time::Local;
+use Getopt::Long qw(:config gnu_getopt);
+use Data::Dumper;
+$Data::Dumper::Sortkeys = 1;
+
+use strict;
+use warnings;
+
+# Command line options
+my $sunset_file = "/home/mct/src/soma-ops/conf/sunset.dat";
+my $schedule_file = "/home/mct/src/soma-ops/conf/schedule.conf";
+my $time;
+my $debug;
+my $dry_run;
+my $start_cmd;
+my $stop_cmd;
+my $help;
+
+# Globals
+my %sunset;
+my @schedule;
+
+##
+
+sub read_sunset_file {
+    my $filename = shift;
+    open my $fd, $filename or die "$filename: $!";
+
+    my %sunset;
+    while (<$fd>) {
+        s/#.*//;
+        s/^\s+//;
+        s/\s+$//;
+        next unless $_;
+        my ($year, $month, $day, $hour, $min) = 
+            (/^(\d{4})-(\d{2})-(\d{2})  \s+
+               (\d{1,2}):(\d{2})pm $/x)
+                    or die "Malformed line: $_";
+        $hour += 12;
+        $sunset{"$year-$month-$day"} =  [ $hour, $min ];
+    }
+
+    return %sunset;
+}
+
+# Accepts "HH:MM", "sunset", "sunset-MIN", or "sunset+MIN"
+sub parse_relative_time {
+    my ($year, $month, $day, $relativetime) = @_;
+    my $time = timelocal(0, 0, 0, $day, $month-1, $year);
+
+    if ($relativetime =~ /^(\d?\d):(\d\d)(am|pm)?$/i) {
+        my ($hour, $min, $ampm) = ($1, $2, $3);
+        $ampm ||= "am";
+        $hour += 12 if lc $ampm eq "pm";
+        return $time + $hour*60*60 + $min*60;
+    }
+
+    elsif ($relativetime =~ /^sunset([+-]\d+)?$/) {
+        my ($offset_minutes) = $1 || 0;
+        my ($sunset) = $sunset{"$year-$month-$day"} || die "No sunset known for $year-$month-$day\n";
+        my ($sunset_hour, $sunset_minute) = @$sunset;
+        return $time + $sunset_hour*60*60 + $sunset_minute*60 + $offset_minutes*60;
+    }
+    else {
+        die "Unparsable relative time: $relativetime";
+    }
+}
+
+sub read_schedule_file {
+    my $filename = shift;
+    my @schedule;
+    open my $fd, $filename or die "$filename: $!";
+
+    while (<$fd>) {
+        s/#.*//;
+        s/^\s+//;
+        s/\s+$//;
+        next unless $_;
+
+        my ($startdate, $starttime, $endtime) = split /\s+/;
+
+        die "Unparsable date: $startdate" unless $startdate =~ /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
+        my ($year, $month, $day) = ($1, $2, $3);
+
+        $starttime = parse_relative_time $year, $month, $day, $starttime;
+        $endtime   = parse_relative_time $year, $month, $day, $endtime;
+        $endtime   += 24*60*60 if $endtime < $starttime;
+
+        push @schedule, [ $starttime, $endtime ];
+    }
+
+    return @schedule;
+}
+
+sub disposition {
+    my $time = shift;
+
+    for my $i (@schedule) {
+        my ($start, $end) = @$i;
+        return 1 if ($start <= $time && $time < $end);
+    }
+
+    return undef;
+}
+
+sub usage {
+die <<EOT;
+Usage: $0 [--unixtime <time>] [--dry-run] [--sunset <sunset.dat>] --schedule <schedule.dat> --start <start_command> --stop <stop_command>
+EOT
+}
+
+sub main {
+    my $result = GetOptions (
+            "sunset=s"      => \$sunset_file,
+            "schedule=s"    => \$schedule_file,
+            "unixtime=s"    => \$time,
+            "debug|v+"      => \$debug,
+            "dry-run|n"     => \$dry_run,
+            "start=s"       => \$start_cmd,
+            "stop=s"        => \$stop_cmd,
+            "help|h"        => \$help,
+        ) or usage;
+
+    usage unless $schedule_file and $start_cmd and $stop_cmd;
+
+    $time ||= time;
+
+    %sunset = read_sunset_file $sunset_file if $sunset_file;
+    print Dumper \%sunset if $debug;
+
+    @schedule = read_schedule_file $schedule_file;
+    if ($debug) {
+        for my $i (@schedule) {
+            my ($start, $end) = @$i;
+            print scalar(localtime $start), "       ", scalar(localtime $end), "\n";
+        }
+    }
+
+    if (disposition $time) {
+        if ($dry_run) {
+            print "I would have run START command '$start_cmd'\n";
+            exit;
+        }
+        print "Running START command '$start_cmd'\n" if $debug;
+        exec $start_cmd;
+    }
+    else {
+        if ($dry_run) {
+            print "I would have run STOP command '$stop_cmd'\n";
+            exit;
+        }
+        print "Running STOP command '$stop_cmd'\n" if $debug;
+        exec $stop_cmd;
+    }
+}
+
+main;
+
+__DATA__
+2014-04-01	7:32pm	11:00pm
+2014-04-02	7:33pm	10:00pm
+2014-04-03	7:34pm	2:00am
+2014-04-04	sunset	2:00am
+2014-04-29	sunset	4:42am

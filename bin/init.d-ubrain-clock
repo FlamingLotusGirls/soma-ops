@@ -1,0 +1,32 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:          ubrain-clock
+# Required-Start:    mountdevsubfs
+# Required-Stop:     $local_fs
+# Default-Start:     S
+# X-Start-Before:    checkroot
+# Default-Stop:      0 6
+### END INIT INFO
+
+HCTOSYS_DEVICE=rtc0
+
+# We only want to use the system timezone or else we'll get
+# potential inconsistency at startup.
+unset TZ
+
+ubrainclock()
+{
+    case "$1" in
+	start)
+		echo "ubrain clock start"
+		d=$(/usr/local/bin/ubrain-get-time /dev/ttyO2 9600)
+		if test -n "$d"
+		then date --set="$d"
+		else echo Failed to get clock
+		fi
+	    ;;
+    esac
+}
+
+ubrainclock "$@"
