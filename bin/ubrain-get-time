@@ -10,8 +10,18 @@ import re
 import signal
 signal.alarm(3)
 
-ser = serial.Serial(sys.argv[1])
-ser.baud = int(sys.argv[2])
+if len(sys.argv) > 1:
+    line = sys.argv[1]
+else:
+    line = "/dev/ttyO2"
+
+if len(sys.argv) > 2:
+    baud = sys.argv[2]
+else:
+    baud = 9600
+
+ser = serial.Serial(line)
+ser.baud = int(baud)
 ser.flushInput()
 
 while True:
