@@ -6,9 +6,11 @@
 //      http://www.pjrc.com/teensy/td_libs_SPI.html
 //      https://www.pjrc.com/teensy/pinout.html
 
-#define RTC_SELECT_PIN       0
+
 //#define INTERNAL_LED_PIN  11    // Unused; shares pin with TEMP_4
-#define POWER_SENSOR_PIN    A0
+//#define POWER_SENSOR_PIN  A0  // Unused; backlow allowed Teensy to power on from this pin
+
+#define RTC_SELECT_PIN       0
 #define CURRENT_SENSOR_PIN  A1
 
 #define ACC_Z_PIN           A2
@@ -23,7 +25,7 @@
 #define BUTTON_1_PIN        16
 #define BUTTON_2_PIN        15
 
-#define UART    Serial1
+#define UART Serial1
 
 float read_ac_current()
 {
@@ -53,12 +55,11 @@ float read_accelerometer()
 {
     // 3.3/2/5.0*1024   => 337.92       338 (0g)
     // 0.6/5.0*1024     => 122.88       123 (mv/G)
-    float gx = (analogRead(ACC_X_PIN) - 337.92) / 122.88;
-    float gy = (analogRead(ACC_Y_PIN) - 337.92) / 122.88;
-    float gz = (analogRead(ACC_Z_PIN) - 337.92) / 122.88;
-    float sum = abs(gx) + abs(gy) + abs(gz) - 1;
-    // Serial.println(sum, 5);
-    return sum;
+    float gx = abs(analogRead(ACC_X_PIN) - 337.92) / 122.88;
+    float gy = abs(analogRead(ACC_Y_PIN) - 337.92) / 122.88;
+    float gz = abs(analogRead(ACC_Z_PIN) - 337.92) / 122.88;
+    float sum = gx + gy + gz;
+    return abs(1-sum);
 }
 
 // RTC code came from
@@ -161,14 +162,6 @@ int get_time()
 
 void setup()
 {
-    Serial.begin(9600);
-    UART.begin(9600);
-
-    pinMode(RTC_SELECT_PIN, OUTPUT);
-
-    pinMode(POWER_SENSOR_PIN, INPUT);
-    pinMode(CURRENT_SENSOR_PIN, INPUT);
-
     pinMode(ACC_Z_PIN, INPUT);
     pinMode(ACC_Y_PIN, INPUT);
     pinMode(ACC_X_PIN, INPUT);
@@ -181,6 +174,11 @@ void setup()
     pinMode(BUTTON_1_PIN, INPUT_PULLUP);
     pinMode(BUTTON_2_PIN, INPUT_PULLUP);
 
+    pinMode(CURRENT_SENSOR_PIN, INPUT);
+    pinMode(RTC_SELECT_PIN, OUTPUT);
+
+    Serial.begin(9600);
+    UART.begin(9600);
     RTC_init();
 }
 
@@ -234,12 +232,136 @@ void read_serial()
     }
 }
 
-float read_temp(int pin)
+void read_temp(int pin, int *raw, float *c, float *f)
 {
-    int raw = analogRead(pin);
-    float c = (5.0 * raw * 100) / 1024;
-    float f = (c * 9)/ 5 + 32;
-    return raw;
+    *raw = analogRead(pin);
+    *c = (5.0 * *raw * 100) / 1024;
+    *f = (*c * 9)/ 5 + 32;
+}
+
+float max_acc;
+
+void show_output()
+{
+    int temp_raw1, temp_raw2, temp_raw3, temp_raw4;
+    float temp_f1, temp_f2, temp_f3, temp_f4,
+          temp_c1, temp_c2, temp_c3, temp_c4,
+          amps;
+
+    amps = read_ac_current();
+
+    read_temp(TEMP_1_PIN, &temp_raw1, &temp_c1, &temp_f1);
+    read_temp(TEMP_2_PIN, &temp_raw2, &temp_c2, &temp_f2);
+    read_temp(TEMP_3_PIN, &temp_raw3, &temp_c3, &temp_f3);
+    read_temp(TEMP_4_PIN, &temp_raw4, &temp_c4, &temp_f4);
+
+    //
+
+    Serial.print(timebuf);
+    Serial.print("     ");
+
+    Serial.print("Acc: ");
+    Serial.print(max_acc, 5);
+    Serial.print("     ");
+
+    Serial.print("Amp: ");
+    Serial.print(amps);
+    Serial.print("     ");
+
+    Serial.print("TempRaw: ");
+    Serial.print(temp_raw1); Serial.print(" ");
+    Serial.print(temp_raw2); Serial.print(" ");
+    Serial.print(temp_raw3); Serial.print(" ");
+    Serial.print(temp_raw4); Serial.print(" ");
+    Serial.print("  ");
+
+    Serial.print("TempF: ");
+    Serial.print(temp_f1); Serial.print("  ");
+    Serial.print(temp_f2); Serial.print("  ");
+    Serial.print(temp_f3); Serial.print("  ");
+    Serial.print(temp_f4); Serial.println();
+
+    //
+
+    UART.print(timebuf);
+    UART.print("     ");
+
+    UART.print("Acc: ");
+    UART.print(max_acc, 5);
+    UART.print("     ");
+
+    UART.print("Amp: ");
+    UART.print(amps);
+    UART.print("     ");
+
+    UART.print("TempRaw: ");
+    UART.print(temp_raw1); UART.print(" ");
+    UART.print(temp_raw2); UART.print(" ");
+    UART.print(temp_raw3); UART.print(" ");
+    UART.print(temp_raw4); UART.print(" ");
+    UART.print("  ");
+
+    UART.print("TempF: ");
+    UART.print(temp_f1); UART.print("  ");
+    UART.print(temp_f2); UART.print("  ");
+    UART.print(temp_f3); UART.print("  ");
+    UART.print(temp_f4); UART.println();
+}
+
+void print_button(int i, int fired)
+{
+    if (fired) {
+        Serial.print("!ON ");
+        UART.print("!ON ");
+    }
+    else {
+        Serial.print("!OFF ");
+        UART.print("!OFF ");
+    }
+
+    Serial.println(i);
+    UART.println(i);
+}
+
+#define BUTTON_HOLD_TIME 250
+void read_buttons()
+{
+    static uint32_t debounced[2] = { 1, 1 };
+    static int button_pin[2] = { BUTTON_1_PIN, BUTTON_2_PIN };
+    static int pressed[2];
+    static int show_time[2];
+
+    unsigned long now = millis();
+
+    for (int i = 0; i < 2; i++)
+    {
+        debounced[i] = (debounced[i] << 1) | digitalRead(button_pin[i]);
+
+        // If it was previously pressed
+        if (pressed[i]) {
+
+            // if now released
+            if (debounced[i] != 0) {
+                print_button(i, 0);
+                pressed[i] = 0;
+            }
+
+            else if (now - show_time[i] > BUTTON_HOLD_TIME) {
+                print_button(i, 1);
+                show_time[i] = now;
+            }
+        }
+
+        // If it was not previously pressed
+        else {
+            // if now pressed
+            if (debounced[i] == 0) {
+                pressed[i] = 1;
+                print_button(i, 1);
+                show_time[i] = now;
+            }
+        }
+    }
 }
 
 void loop()
@@ -248,35 +370,15 @@ void loop()
 
     while (1) {
         int new_secs = get_time();
-        if (new_secs != old_secs) {
-            Serial.println(timebuf);
-            UART.println(timebuf);
+
+        if (new_secs != old_secs)
+        {
+            show_output();
+            max_acc = 0;
             old_secs = new_secs;
         }
 
-        for (int i = 0; i < 5; i++) {
-            Serial.print(read_temp(TEMP_1_PIN)); Serial.print("  ");
-            Serial.print(read_temp(TEMP_2_PIN)); Serial.print("  ");
-            Serial.print(read_temp(TEMP_3_PIN)); Serial.print("  ");
-            Serial.print(read_temp(TEMP_4_PIN)); Serial.print("  ");
-            Serial.println();
-
-            UART.print(read_temp(TEMP_1_PIN)); UART.print("  ");
-            UART.print(read_temp(TEMP_2_PIN)); UART.print("  ");
-            UART.print(read_temp(TEMP_3_PIN)); UART.print("  ");
-            UART.print(read_temp(TEMP_4_PIN)); UART.print("  ");
-            UART.println();
-            delay(100);
-        }
+        max_acc = max(max_acc, read_accelerometer());
+        read_buttons();
     }
-
-    while (1) {
-        Serial.print(digitalRead(BUTTON_1_PIN));  Serial.print("  ");
-        Serial.print(digitalRead(BUTTON_2_PIN));
-        Serial.println();
-        delay(10);
-    }
-
-    static bool first;
-    unsigned long now = millis();
 }
