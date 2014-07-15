@@ -6,10 +6,8 @@ import sys
 import re
 import os
 
-# !ON 0
-# !ON 1
-
-TIMEOUT = 0.300
+button_timeout = 0.3
+serial_timeout = 0.1
 
 buttons = [
             { 'file':'/var/run/soma/buttonA', 'on':False, 'time':0 },
@@ -20,17 +18,17 @@ def uptime():
     return float(file("/proc/uptime").read().split(" ")[0])
 
 def button_on(num):
-    print "On", num
+    print "== On", num
     if not buttons[num]['on']:
         file(buttons[num]['file'], "w")
     buttons[num]['time'] = uptime();
     buttons[num]['on'] = True
 
-def button_off(num, timeout=None):
+def button_off(num, timeout=False):
     if timeout:
-        print "Timing out button", num
+        print "== Timing out button", num
     else:
-        print "Off", num
+        print "== Off", num
 
     try:
         os.unlink(buttons[num]['file'])
@@ -41,12 +39,12 @@ def button_off(num, timeout=None):
 
 def check_buttons():
     now = uptime()
-    for i,x in enumerate(buttons):
-        if buttons[i]['on'] and now - buttons[i]['time'] > TIMEOUT:
+    for i in range(len(buttons)):
+        if buttons[i]['on'] and now - buttons[i]['time'] > button_timeout:
             button_off(i, True)
 
 def loop(line, baud):
-    ser = serial.Serial(line, timeout=0.1)
+    ser = serial.Serial(line, timeout=serial_timeout)
     ser.baud = baud
     ser.flushInput()
 
