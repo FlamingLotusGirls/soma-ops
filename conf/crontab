@@ -1,1 +1,1 @@
-* *	* * *     root		soma-scheduler --start soma-on --stop soma-off
+* *    * * *     root    test -c /dev/ttyUSB0 && soma-scheduler --start soma-on --stop soma-off
