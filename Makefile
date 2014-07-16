@@ -11,8 +11,8 @@ install: all
 	install -p -o root -g root -m 755 bin/ubrain-get-time		/usr/local/bin
 	install -p -o root -g root -m 755 bin/launch-opc-client		/usr/local/bin
 	install -p -o root -g root -m 755 bin/launch-opc-server		/usr/local/bin
-	install -p -o root -g root -m 755 bin/soma-on			/usr/local/bin
-	install -p -o root -g root -m 755 bin/soma-off			/usr/local/bin
+	install -p -o root -g root -m 755 bin/soma-start		/usr/local/bin
+	install -p -o root -g root -m 755 bin/soma-stop			/usr/local/bin
 	install -p -o root -g root -m 644 conf/opc-client.service	/etc/systemd/system
 	install -p -o root -g root -m 644 conf/opc-server.service	/etc/systemd/system
 	install -p -o root -g root -m 644 conf/ubrain-daemon.service	/etc/systemd/system

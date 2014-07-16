@@ -1,1 +1,3 @@
-* *    * * *     root    test -c /dev/ttyUSB0 && soma-scheduler --start soma-on --stop soma-off
+PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/games:/usr/games
+
+* *    * * *     root    test -c /dev/ttyUSB0 && soma-scheduler --start soma-start --stop soma-stop
