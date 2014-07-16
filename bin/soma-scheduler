@@ -129,10 +129,10 @@ sub main {
     $time ||= time;
 
     %sunset = read_sunset_file $sunset_file if $sunset_file;
-    print Dumper \%sunset if $debug;
+    print Dumper \%sunset if $debug >= 3;
 
     @schedule = read_schedule_file $schedule_file;
-    if ($debug) {
+    if ($debug >= 2) {
         for my $i (@schedule) {
             my ($start, $end) = @$i;
             print scalar(localtime $start), "       ", scalar(localtime $end), "\n";
