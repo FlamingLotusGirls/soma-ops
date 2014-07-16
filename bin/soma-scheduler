@@ -13,7 +13,7 @@ use warnings;
 my $sunset_file = "/etc/soma/sunset.dat";
 my $schedule_file = "/etc/soma/schedule.conf";
 my $time;
-my $debug;
+my $debug = 0;
 my $dry_run;
 my $start_cmd;
 my $stop_cmd;
