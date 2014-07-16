@@ -3,7 +3,7 @@ Description=Soma OPC Client
 
 [Service]
 ExecStart=/usr/local/bin/launch-opc-client
-RestartSec=2
+RestartSec=10
 Restart=always
 
 [Install]
