@@ -13,4 +13,5 @@ install: all
 	install -p -o root -g root -m 755 bin/launch-opc-server		/usr/local/bin
 	install -p -o root -g root -m 644 conf/opc-client.service	/etc/systemd/system
 	install -p -o root -g root -m 644 conf/opc-server.service	/etc/systemd/system
+	systemctl --system daemon-reload
 	update-rc.d ubrain-clock defaults 1
