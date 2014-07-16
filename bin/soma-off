@@ -1,0 +1,6 @@
+#!/bin/bash
+# vim:set ts=4 sw=4 ai et:
+
+curl -s --fail --connect-timeout 5 --max-time 5 -o /dev/null http://admin:pier14@power/outlet?4=OFF
+systemctl stop opc-server.service
+systemctl stop opc-client.service
