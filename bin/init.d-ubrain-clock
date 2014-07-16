@@ -20,6 +20,8 @@ ubrainclock()
     case "$1" in
 	start)
 		echo "ubrain clock start"
+		mkdir -p /var/run/soma
+		chmod 1777 /var/run/soma
 		d=$(/usr/local/bin/ubrain-get-time /dev/ttyO2 9600)
 		if test -n "$d"
 		then date --set="$d"
