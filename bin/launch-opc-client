@@ -1,0 +1,18 @@
+#!/bin/bash
+# vim:set ts=4 sw=4 ai et:
+
+DEV=/dev/ttyUSB0
+
+cd /usr/local/soma/pier14/opc-client || exit 1
+
+if ! test -c $DEV
+then
+    echo "Device $DEV does not exist.  Sleeping forever."
+    sleep 1d
+elif ! soma-scheduler --start true --stop false
+then
+    echo "Not currently scheduled to run.  Sleeping a bit."
+    sleep 1m
+else
+    exec ./soma_client.py
+fi

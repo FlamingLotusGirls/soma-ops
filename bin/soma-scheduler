@@ -10,8 +10,8 @@ use strict;
 use warnings;
 
 # Command line options
-my $sunset_file = "/home/mct/src/soma-ops/conf/sunset.dat";
-my $schedule_file = "/home/mct/src/soma-ops/conf/schedule.conf";
+my $sunset_file = "/etc/soma/sunset.dat";
+my $schedule_file = "/etc/soma/schedule.conf";
 my $time;
 my $debug;
 my $dry_run;
@@ -108,7 +108,7 @@ sub disposition {
 
 sub usage {
 die <<EOT;
-Usage: $0 [--unixtime <time>] [--dry-run] [--sunset <sunset.dat>] --schedule <schedule.dat> --start <start_command> --stop <stop_command>
+Usage: $0 [--unixtime <time>] [--dry-run] [--sunset <sunset.dat>] [--schedule <schedule.dat>] --start <start_command> --stop <stop_command>
 EOT
 }
 

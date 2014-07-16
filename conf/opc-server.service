@@ -1,0 +1,10 @@
+[Unit]
+Description=Soma OPC Server
+
+[Service]
+ExecStart=launch-opc-server
+RestartSec=2
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
