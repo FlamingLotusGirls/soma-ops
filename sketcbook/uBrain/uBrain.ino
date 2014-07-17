@@ -260,18 +260,16 @@ void show_output()
     read_temp(TEMP_3_PIN, &temp_raw3, &temp_c3, &temp_f3);
     read_temp(TEMP_4_PIN, &temp_raw4, &temp_c4, &temp_f4);
 
-    //
-
     PrintBoth(timebuf);
-    PrintBoth("     ");
-    PrintBoth(millis());
-    PrintBoth("     ");
+    PrintBoth("   ");
+    PrintBoth(millis()/1000.0);
+    PrintBoth("   ");
 
     PrintBoth("Acc: ");
     PrintBoth(max_acc, 5);
     PrintBoth("     ");
 
-    PrintBoth("Amp: ");
+    PrintBoth("Amps: ");
     PrintBoth(amps);
     PrintBoth("     ");
 
@@ -289,15 +287,10 @@ void show_output()
     PrintBoth(temp_f4); PrintBoth("\r\n");
 }
 
-void print_button(int i, int fired)
+void print_button(char *s, int i)
 {
-    if (fired) {
-        PrintBoth("!ON ");
-    }
-    else {
-        PrintBoth("!OFF ");
-    }
-
+    PrintBoth(s);
+    PrintBoth(" ");
     PrintBoth(i);
     PrintBoth("\r\n");
 }
@@ -308,7 +301,7 @@ void read_buttons()
     static uint32_t debounced[2] = { 1, 1 };
     static int button_pin[2] = { BUTTON_1_PIN, BUTTON_2_PIN };
     static int pressed[2];
-    static int show_time[2];
+    static unsigned long print_time[2];
 
     unsigned long now = millis();
 
@@ -316,29 +309,23 @@ void read_buttons()
     {
         debounced[i] = (debounced[i] << 1) | digitalRead(button_pin[i]);
 
-        // If it was previously pressed
-        if (pressed[i]) {
-
-            // if now released
-            if (debounced[i] != 0) {
-                print_button(i, 0);
-                pressed[i] = 0;
-            }
-
-            else if (now - show_time[i] > BUTTON_HOLD_TIME) {
-                print_button(i, 1);
-                show_time[i] = now;
-            }
+        // Was pressed, now released
+        if (pressed[i] && debounced[i] != 0) {
+            print_button("!OFF", i);
+            pressed[i] = 0;
         }
 
-        // If it was not previously pressed
-        else {
-            // if now pressed
-            if (debounced[i] == 0) {
-                pressed[i] = 1;
-                print_button(i, 1);
-                show_time[i] = now;
-            }
+        // Was pressed, still pressed, but output needs to be refreshed
+        else if (pressed[i] && now - print_time[i] > BUTTON_HOLD_TIME) {
+            print_button("!ON", i);
+            print_time[i] = now;
+        }
+
+        // Was not pressed, but now is pressed
+        else if (!pressed[i] && debounced[i] == 0) {
+            print_button("!ON", i);
+            print_time[i] = now;
+            pressed[i] = 1;
         }
     }
 }
