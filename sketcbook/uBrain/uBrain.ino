@@ -67,8 +67,8 @@ float read_accelerometer()
     return abs(1-sum);
 }
 
-// RTC code came from
-// http://dlnmh9ip6v2uc.cloudfront.net/datasheets/BreakoutBoards/DS3234_Example_Code.pde
+// RTC code came from http://dlnmh9ip6v2uc.cloudfront.net/datasheets/BreakoutBoards/DS3234_Example_Code.pde
+
 int RTC_init()
 {
     pinMode(RTC_SELECT_PIN, OUTPUT);
@@ -321,7 +321,7 @@ void read_buttons()
             print_time[i] = now;
         }
 
-        // Was not pressed, but now is pressed
+        // Was not pressed, but is now pressed
         else if (!pressed[i] && debounced[i] == 0) {
             print_button("!ON", i);
             print_time[i] = now;
@@ -337,8 +337,7 @@ void loop()
     while (1) {
         int new_secs = get_time();
 
-        if (new_secs != old_secs)
-        {
+        if (new_secs != old_secs) {
             show_output();
             max_acc = 0;
             old_secs = new_secs;
