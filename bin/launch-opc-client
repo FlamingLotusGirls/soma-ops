@@ -14,5 +14,6 @@ then
     echo "Not currently scheduled to run.  Sleeping a bit."
     sleep 1m
 else
+    sleep 3s # Allow the server to start
     exec ./soma_client.py
 fi
