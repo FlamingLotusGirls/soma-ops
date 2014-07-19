@@ -6,7 +6,6 @@
 //      http://www.pjrc.com/teensy/td_libs_SPI.html
 //      https://www.pjrc.com/teensy/pinout.html
 
-
 //#define INTERNAL_LED_PIN  11    // Unused; shares pin with TEMP_4
 //#define POWER_SENSOR_PIN  A0  // Unused; backlow allowed Teensy to power on from this pin
 
@@ -25,7 +24,13 @@
 #define BUTTON_1_PIN        16
 #define BUTTON_2_PIN        15
 
-#define UART Serial1
+// Print to both Serial, the USB device, and Serial1, the hardware UART
+void PrintBoth(char *x)         { Serial.print(x);   Serial1.print(x);   }
+void PrintBoth(int x)           { Serial.print(x);   Serial1.print(x);   }
+void PrintBoth(uint32_t x)      { Serial.print(x);   Serial1.print(x);   }
+void PrintBoth(double x)        { Serial.print(x);   Serial1.print(x);   }
+void PrintBoth(float x)         { Serial.print(x);   Serial1.print(x);   }
+void PrintBoth(float x, int y)  { Serial.print(x,y); Serial1.print(x,y); }
 
 float read_ac_current()
 {
@@ -62,8 +67,8 @@ float read_accelerometer()
     return abs(1-sum);
 }
 
-// RTC code came from
-// http://dlnmh9ip6v2uc.cloudfront.net/datasheets/BreakoutBoards/DS3234_Example_Code.pde
+// RTC code came from http://dlnmh9ip6v2uc.cloudfront.net/datasheets/BreakoutBoards/DS3234_Example_Code.pde
+
 int RTC_init()
 {
     pinMode(RTC_SELECT_PIN, OUTPUT);
@@ -178,7 +183,7 @@ void setup()
     pinMode(RTC_SELECT_PIN, OUTPUT);
 
     Serial.begin(9600);
-    UART.begin(9600);
+    Serial1.begin(9600);
     RTC_init();
 }
 
@@ -255,72 +260,39 @@ void show_output()
     read_temp(TEMP_3_PIN, &temp_raw3, &temp_c3, &temp_f3);
     read_temp(TEMP_4_PIN, &temp_raw4, &temp_c4, &temp_f4);
 
-    //
+    PrintBoth(timebuf);
+    PrintBoth("   ");
+    PrintBoth(millis()/1000.0);
+    PrintBoth("   ");
 
-    Serial.print(timebuf);
-    Serial.print("     ");
+    PrintBoth("Acc: ");
+    PrintBoth(max_acc, 5);
+    PrintBoth("     ");
 
-    Serial.print("Acc: ");
-    Serial.print(max_acc, 5);
-    Serial.print("     ");
+    PrintBoth("Amps: ");
+    PrintBoth(amps);
+    PrintBoth("     ");
 
-    Serial.print("Amp: ");
-    Serial.print(amps);
-    Serial.print("     ");
+    PrintBoth("TempRaw: ");
+    PrintBoth(temp_raw1); PrintBoth(" ");
+    PrintBoth(temp_raw2); PrintBoth(" ");
+    PrintBoth(temp_raw3); PrintBoth(" ");
+    PrintBoth(temp_raw4); PrintBoth(" ");
+    PrintBoth("  ");
 
-    Serial.print("TempRaw: ");
-    Serial.print(temp_raw1); Serial.print(" ");
-    Serial.print(temp_raw2); Serial.print(" ");
-    Serial.print(temp_raw3); Serial.print(" ");
-    Serial.print(temp_raw4); Serial.print(" ");
-    Serial.print("  ");
-
-    Serial.print("TempF: ");
-    Serial.print(temp_f1); Serial.print("  ");
-    Serial.print(temp_f2); Serial.print("  ");
-    Serial.print(temp_f3); Serial.print("  ");
-    Serial.print(temp_f4); Serial.println();
-
-    //
-
-    UART.print(timebuf);
-    UART.print("     ");
-
-    UART.print("Acc: ");
-    UART.print(max_acc, 5);
-    UART.print("     ");
-
-    UART.print("Amp: ");
-    UART.print(amps);
-    UART.print("     ");
-
-    UART.print("TempRaw: ");
-    UART.print(temp_raw1); UART.print(" ");
-    UART.print(temp_raw2); UART.print(" ");
-    UART.print(temp_raw3); UART.print(" ");
-    UART.print(temp_raw4); UART.print(" ");
-    UART.print("  ");
-
-    UART.print("TempF: ");
-    UART.print(temp_f1); UART.print("  ");
-    UART.print(temp_f2); UART.print("  ");
-    UART.print(temp_f3); UART.print("  ");
-    UART.print(temp_f4); UART.println();
+    PrintBoth("TempF: ");
+    PrintBoth(temp_f1); PrintBoth("  ");
+    PrintBoth(temp_f2); PrintBoth("  ");
+    PrintBoth(temp_f3); PrintBoth("  ");
+    PrintBoth(temp_f4); PrintBoth("\r\n");
 }
 
-void print_button(int i, int fired)
+void print_button(char *s, int i)
 {
-    if (fired) {
-        Serial.print("!ON ");
-        UART.print("!ON ");
-    }
-    else {
-        Serial.print("!OFF ");
-        UART.print("!OFF ");
-    }
-
-    Serial.println(i);
-    UART.println(i);
+    PrintBoth(s);
+    PrintBoth(" ");
+    PrintBoth(i);
+    PrintBoth("\r\n");
 }
 
 #define BUTTON_HOLD_TIME 250
@@ -329,7 +301,7 @@ void read_buttons()
     static uint32_t debounced[2] = { 1, 1 };
     static int button_pin[2] = { BUTTON_1_PIN, BUTTON_2_PIN };
     static int pressed[2];
-    static int show_time[2];
+    static unsigned long print_time[2];
 
     unsigned long now = millis();
 
@@ -337,29 +309,23 @@ void read_buttons()
     {
         debounced[i] = (debounced[i] << 1) | digitalRead(button_pin[i]);
 
-        // If it was previously pressed
-        if (pressed[i]) {
-
-            // if now released
-            if (debounced[i] != 0) {
-                print_button(i, 0);
-                pressed[i] = 0;
-            }
-
-            else if (now - show_time[i] > BUTTON_HOLD_TIME) {
-                print_button(i, 1);
-                show_time[i] = now;
-            }
+        // Was pressed, now released
+        if (pressed[i] && debounced[i] != 0) {
+            print_button("!OFF", i);
+            pressed[i] = 0;
         }
 
-        // If it was not previously pressed
-        else {
-            // if now pressed
-            if (debounced[i] == 0) {
-                pressed[i] = 1;
-                print_button(i, 1);
-                show_time[i] = now;
-            }
+        // Was pressed, still pressed, but output needs to be refreshed
+        else if (pressed[i] && now - print_time[i] > BUTTON_HOLD_TIME) {
+            print_button("!ON", i);
+            print_time[i] = now;
+        }
+
+        // Was not pressed, but is now pressed
+        else if (!pressed[i] && debounced[i] == 0) {
+            print_button("!ON", i);
+            print_time[i] = now;
+            pressed[i] = 1;
         }
     }
 }
@@ -371,8 +337,7 @@ void loop()
     while (1) {
         int new_secs = get_time();
 
-        if (new_secs != old_secs)
-        {
+        if (new_secs != old_secs) {
             show_output();
             max_acc = 0;
             old_secs = new_secs;
