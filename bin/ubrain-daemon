@@ -58,7 +58,6 @@ def loop(device, baud):
 
         match = re.match(r'!ON ([01])', line)
         if match:
-            print match.groups()
             num = int(match.groups()[0])
             button_on(num)
         match = re.match(r'!OFF ([01])', line)
