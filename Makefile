@@ -19,7 +19,7 @@ install: all
 	install -p -o root -g root -m 644 conf/opc-client.service	/etc/systemd/system
 	install -p -o root -g root -m 644 conf/opc-server.service	/etc/systemd/system
 	install -p -o root -g root -m 644 conf/ubrain-daemon.service	/etc/systemd/system
-	install -p -o root -g root -m 644 conf/crontab			/etc/cron.d/soma
+	rm -f /etc/cron.d/soma && ln -s /etc/soma/crontab /etc/cron.d/soma
 	systemctl --system daemon-reload
 	systemctl enable opc-server.service
 	systemctl enable opc-client.service
